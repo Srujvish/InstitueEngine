@@ -1,7 +1,10 @@
 name: 20-Hour Algo Run
 
 on:
-  workflow_dispatch:  # Manual trigger only
+  schedule:
+    # 8:45 AM IST = 03:15 UTC
+    - cron: "15 3 * * 1-5"
+  workflow_dispatch:  # Manual trigger also available
 
 jobs:
   run-algo:
@@ -20,8 +23,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install "numpy<2.0" "pandas<2.2"
-        pip install ta yfinance requests pyotp SmartApi logzero websocket-client smartapi-python pycryptodome multitasking peewee scikit-learn joblib
+        pip install ta yfinance requests pyotp pandas SmartApi logzero websocket-client smartapi-python datetime pycryptodome multitasking peewee
 
     - name: Run 20-Hour Algo Marathon
       env:
@@ -36,14 +38,17 @@ jobs:
         echo "🕒 Current IST: $(TZ='Asia/Kolkata' date '+%H:%M:%S')"
         echo "⏰ Will run for 20 hours automatically"
         
+        # Run for exactly 20 hours (72000 seconds)
         end_time=$(date -d "20 hours" +%s)
         
         while [ $(date +%s) -lt $end_time ]; do
           CURRENT_TIME_IST=$(TZ='Asia/Kolkata' date '+%H:%M:%S')
           echo "🔄 Running at: $CURRENT_TIME_IST IST"
           
+          # Run one iteration
           python ultimate_algo.py
           
+          # Wait 30 seconds before next iteration
           sleep 30
         done
         
