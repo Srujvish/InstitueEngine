@@ -1,79 +1,53 @@
-name: 20-Hour Algo Run
+name: Pre-Market Analysis
 
 on:
   schedule:
-    # 8:45 AM IST = 03:15 UTC
-    - cron: "00 3 * * 1-5"  # 8:30 AM IST = 3:00 AM UTC
-  workflow_dispatch:  # Manual trigger also available
+    # Runs at 9:00 AM IST every weekday (3:30 UTC)
+    - cron: '30 3 * * 1-5'
+  workflow_dispatch:
 
 jobs:
-  run-algo:
+  generate-report:
     runs-on: ubuntu-latest
-    timeout-minutes: 2000  # 20 hours max
-
+    
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
+    - uses: actions/checkout@v3
+    
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'  # Use 3.10 for better compatibility
-
-    - name: Install dependencies
+        python-version: '3.10'
+    
+    - name: Install ALL dependencies
       run: |
-        python -m pip install --upgrade pip
-        # Install compatible versions
-        pip install numpy==1.24.3  # Downgrade numpy to compatible version
-        pip install scikit-learn==1.3.0
-        pip install joblib==1.3.0
-        pip install yfinance==0.2.66
-        pip install pandas==2.0.3  # Downgrade pandas for compatibility
-        pip install ta==0.11.0
-        pip install smartapi-python==1.5.5
-        pip install requests==2.32.5
-        pip install pyotp==2.9.0
-        pip install pycryptodome==3.23.0
-        pip install logzero==1.7.0
-        pip install multitasking==0.0.12
-        pip install websocket-client==1.9.0
-        pip install peewee==3.18.3
-
-    - name: Run 20-Hour Algo Marathon
+        pip install --upgrade pip
+        # Install core dependencies first
+        pip install pandas numpy requests yfinance pytz python-dotenv
+        
+        # Install Angel One dependencies with ALL required packages
+        pip install smartapi-python pyotp logzero websocket-client
+        
+        # Install optional packages
+        pip install ta loguru
+    
+    - name: Verify installations
+      run: |
+        python -c "import pyotp; print('✅ pyotp installed')"
+        python -c "import logzero; print('✅ logzero installed')"
+        python -c "import SmartApi; print('✅ SmartApi installed')"
+        python -c "import yfinance; print('✅ yfinance installed')"
+    
+    - name: Display time
+      run: |
+        echo "UTC Time: $(date -u)"
+        echo "IST Time: $(TZ='Asia/Kolkata' date)"
+    
+    - name: Run Pre-Market Analysis
       env:
+        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        CHAT_ID: ${{ secrets.CHAT_ID }}
         API_KEY: ${{ secrets.API_KEY }}
         CLIENT_CODE: ${{ secrets.CLIENT_CODE }}
         PASSWORD: ${{ secrets.PASSWORD }}
         TOTP_SECRET: ${{ secrets.TOTP_SECRET }}
-        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-        CHAT_ID: ${{ secrets.CHAT_ID }}
-      run: |
-        echo "🏁 STARTING 20-HOUR ALGO at $(TZ='Asia/Kolkata' date)"
-        echo "🕒 Current IST: $(TZ='Asia/Kolkata' date '+%H:%M:%S')"
-        echo "⏰ Will run for 20 hours automatically"
-        
-        # Test import first
-        echo "🧪 Testing imports..."
-        python -c "import numpy; print(f'numpy: {numpy.__version__}')"
-        python -c "import sklearn; print(f'sklearn: {sklearn.__version__}')"
-        python -c "import pandas; print(f'pandas: {pandas.__version__}')"
-        
-        # Run for exactly 20 hours (72000 seconds)
-        end_time=$(date -d "20 hours" +%s)
-        
-        while [ $(date +%s) -lt $end_time ]; do
-          CURRENT_TIME_IST=$(TZ='Asia/Kolkata' date '+%H:%M:%S')
-          echo "🔄 Running at: $CURRENT_TIME_IST IST"
-          
-          # Run one iteration
-          python ultimate_algo.py
-          
-          # Wait 30 seconds before next iteration
-          sleep 30
-        done
-        
-        echo "✅ 20-HOUR RUN COMPLETED at $(TZ='Asia/Kolkata' date '+%H:%M:%S')"
-
-    - name: Notify completion
-      run: |
-        echo "🎯 20-hour algo run completed at $(TZ='Asia/Kolkata' date)"
+      run: python ultimate_algo.py
